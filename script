@@ -1,0 +1,83 @@
+#!/bin/bash
+
+. ./script-nvm internal
+
+set -e
+finish() { if [ $? -gt 0 ]; then echo-red FAILED; exit 1; fi; }
+trap finish EXIT
+
+if [ -t 1 ]; then
+    echo-green()  { echo -ne "\e[32m"; echo -n "$@"; echo -e "\e[0m"; }
+    echo-red()    { echo -ne "\e[31m"; echo -n "$@"; echo -e "\e[0m"; }
+else
+    echo-green()  { echo "$@"; }
+    echo-red()    { echo "$@"; }
+fi
+
+npm-install() {
+    rm -rf node_modules/
+    npm install
+}
+
+npm-ci() {
+    rm -rf node_modules/
+    npm ci
+}
+
+run-tests() {
+    npx jest
+    npx eslint .
+    echo-green done testing
+}
+
+eslint-fix() {
+    npx eslint . --fix
+}
+
+die() {
+    echo-red "$@"
+    exit 1
+}
+
+publish() {
+    run-tests || die Refuse to publish with failing tests
+    [ -z "$(git status --porcelain)" ] || die Dirty working directory
+    version=$(node -e 'console.log(require("./package.json").version)') || die Error finding version
+    [ -n "$version" ] || die Cannot find version
+    this_commit=$(git rev-parse HEAD) || die Missing or broken git repository
+    master_commit=$(git rev-parse master) || die Cannot find master branch
+    tagged_commit=$(git rev-parse v$version) || die Tag v$version is missing
+    [ $this_commit == $master_commit ] || die We are not on master branch
+    [ $tagged_commit == $master_commit ] || die Tag v$version does not point to master
+    npm publish --access public
+}
+
+print-help() {
+cat <<EOF
+Usage:
+
+  . ./script-nvm             # NOTICE the dot-space-dot and the dash. Install
+                             # the correct node and npm version into the current
+                             # shell. This makes subsequent ./script invocations
+                             # faster.
+
+  ./script npm-install       # Update and install npm dependencies.
+
+  ./script npm-ci            # Install npm dependencies according to lockfile.
+
+  ./script run-tests         # Run tests.
+
+  ./script eslint-fix        # Let ESLint fix everything it can.
+
+  ./script publish           # Make sure everything looks ready for publishing,
+                             # and then publish to registry.
+EOF
+}
+
+if [ -z "$1" ]; then
+    print-help
+else
+    # Run the command described by the arguments, in the context of the
+    # definitions above
+    "$@"
+fi
