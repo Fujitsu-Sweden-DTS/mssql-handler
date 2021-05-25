@@ -2,13 +2,19 @@
 
 ## What is it
 
-A library for interacting with MS SQL Server.
-
-Implemented as a convenience wrapper around `mssql`.
+A library for interacting with MS SQL Server, implemented as a convenience wrapper around `mssql`.
 
 ## How to use it
 
-Import and initialize it like so:
+This module provides no classes.
+You don't need to keep track of connection pools or instances.
+Just call the module functions directly with what you need.
+Connection pools are created and cached behind the scenes.
+
+### mssqlHandler.init({ log })
+
+Initialize the module.
+Example:
 
 ```js
 const mssqlHandler = require("@fujitsusweden/mssql-handler");
@@ -17,14 +23,13 @@ mssqlHandler.init({ log });
 
 The `log` is an object holding the following log functions: `debug`, `info`, `warn`, `error` and `critical`.
 Each log function should be an async function taking arguments `data` and `req`.
-If you use it in a script that should terminate, call `await mssqlHandler.beforeExit()` at the end.
 
-You don't need to keep track of connection pools or instances.
-Just call the module functions directly with what you need.
+### mssqlHandler.beforeExit()
 
-### mssqlHandler.mssql
+Close all connection pools.
 
-The `mssql` module, in case you need to by-pass the wrapper.
+In scripts that should terminate, call `await mssqlHandler.beforeExit()` at the end.
+Otherwise, asynchronous background jobs can prevent the process from terminating indefinitely.
 
 ### mssqlHandler.runDbQuery({ config, query, types, params, req })
 
@@ -46,7 +51,7 @@ Option details:
 
 * **query**: The SQL query to execute. Use `@` to denote parameters.
 
-* **types**: Optional. Usually not needed. Probably never needed. I don't even remember how to use it. Todo.
+* **types**: Optional. Probably never needed. A map from (some of) the parameter names to the name of their type. For the parameters present in `types`, this will override the library's attempt at figuring out a suitable type.
 
 * **params**: Optional. An object mapping parameter names to values.
 
@@ -54,7 +59,7 @@ Option details:
 
 ### mssqlHandler.runDbQueryAG({ config, query, types, params, req })
 
-Asynchronous generator variant of mssqlHandler.runDbQuery, with the same option details.
+Asynchronous generator variant of `mssqlHandler.runDbQuery`, with the same option details.
 Example:
 
 ```js
@@ -77,18 +82,28 @@ Example:
 ```js
 async function transfer({ runDbQuery, fromAccount, toAccount, amount }) {
   await runDbQuery({
-    query: "UPDATE accounts SET balance = balance - @amount where holder = @fromAccount;",
+    query: `
+      UPDATE accounts
+      SET balance = balance - @amount
+      WHERE holder = @fromAccount;`,
     params: { amount, fromAccount },
   });
   await runDbQuery({
-    query: "UPDATE accounts SET balance = balance + @amount where holder = @toAccount;",
+    query: `
+      UPDATE accounts
+      SET balance = balance + @amount
+      WHERE holder = @toAccount;`,
     params: { amount, toAccount },
   });
   const fromAccountAfterwards = await runDbQuery({
-    query: "SELECT * from accounts where holder = @fromAccount;",
+    query: `
+      SELECT *
+      FROM accounts
+      WHERE holder = @fromAccount;`,
     params: { fromAccount },
   });
-  assert(0 <= fromAccountAfterwards[0].balance); // Rollback transaction if overdrafted
+  // Rollback to prevent overdraft
+  assert(0 <= fromAccountAfterwards[0].balance);
 }
 
 await mssqlHandler.runFuncAsTransaction({
@@ -105,41 +120,49 @@ Option details:
 
 * **config**: The SQL configuration to connect with.
 
-* **req**: The `req` object used for logging.
-
-* **context**: Optional. Any number of options you want to pass along to `func`.
-
 * **func**: The function to run within a transaction.
   It should be asynchronous and take a context argument, an object containing:
 
    * **req**
 
-   * **runDbQuery**: Just like mssqlHandler.runDbQuery except it does not accept a `config` option and works within the transaction.
+   * **runDbQuery**: Just like `mssqlHandler.runDbQuery` except it does not accept a `config` option and works within the transaction.
 
-   * **runDbQueryAG**: Just like mssqlHandler.runDbQueryAG except it does not accept a `config` option and works within the transaction.
+   * **runDbQueryAG**: Just like `mssqlHandler.runDbQueryAG` except it does not accept a `config` option and works within the transaction.
 
    * **transaction**: The native `transaction` object. You probably don't need that.
 
    * **...context**: Any other options passed to mssqlHandler.runFuncAsTransaction.
 
+* **req**: The `req` object used for logging.
+
+* **...context**: Optional. Any number of options you want to pass along to `func`.
+
 ### mssqlHandler.escId(id)
 
 Take the name of an identifier (for e.g. a table, column or index) and return it escaped, ready to be used in an SQL statement.
-It might be a good convention to use a `q_` prefix for variable holding quoted identifiers.
+It might be a good convention to use a `q_` prefix for variables holding quoted identifiers.
 Example:
 
 ```js
 const tableName = "Table123";
 const q_tableName = mssqlHandler.escId(tableName);
-await mssqlHandler.runDbQuery({ config, req, query: `UPDATE ${q_tableName} SET a = 0;` });
+await mssqlHandler.runDbQuery({
+  config,
+  req,
+  query: `UPDATE ${q_tableName} SET a = 0;`,
+});
 ```
 
 (There is no function for escaping values. Use the `params` option for that.)
 
-### mssqlHandler.unEscId(id_q)
+### mssqlHandler.unEscId(q_id)
 
 The inverse of `mssqlHandler.escId`.
 
+### mssqlHandler.mssql
+
+The `mssql` module, in case you need to by-pass the wrapper.
+
 ## Development
 
-Run `./script` without arguments for help
+Run `./script` without arguments for help.
