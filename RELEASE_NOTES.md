@@ -8,3 +8,8 @@ First published version
 
 * Improved `README.md`.
 * Updated `package-lock.json`.
+
+## v0.1.2
+
+- Throw error if a parameter value is an array.
+- Allow parameters to `./script eslint-fix`.
