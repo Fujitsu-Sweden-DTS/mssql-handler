@@ -81,6 +81,12 @@ for (const type in mssql.TYPES) {
 // Internal: Function to apply parameters to a request object
 function _applyRequestParams({ request, types, params }) {
   for (const paramname in params) {
+    const value = params[paramname];
+    if (_.isArray(value)) {
+      // Array parameters can be inserted, but they will be converted to a comma-separated string, *not* to a comma-separated list of values.
+      // This is very likely not what the user wants.
+      throw futile.err("Paramater value cannot be an array", { paramname });
+    }
     if (paramname in types) {
       const typestr = types[paramname].toLowerCase();
       if (typestr in mssql_types) {
