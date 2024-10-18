@@ -13,3 +13,9 @@ First published version
 
 - Throw error if a parameter value is an array.
 - Allow parameters to `./script eslint-fix`.
+
+## v0.2.0
+
+- Removed eslint
+- Updated dependencies
+- Bumped node version

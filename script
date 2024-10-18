@@ -26,12 +26,7 @@ npm-ci() {
 
 run-tests() {
     npx jest
-    npx eslint .
     echo-green done testing
-}
-
-eslint-fix() {
-    npx eslint . --fix "$@"
 }
 
 die() {
