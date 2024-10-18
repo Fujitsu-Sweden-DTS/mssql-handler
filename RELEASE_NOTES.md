@@ -18,3 +18,4 @@ First published version
 
 - Removed eslint
 - Updated dependencies
+- Bumped node version
