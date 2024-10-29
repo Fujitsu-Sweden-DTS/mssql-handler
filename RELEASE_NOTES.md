@@ -19,3 +19,7 @@ First published version
 - Removed eslint
 - Updated dependencies
 - Bumped node version
+
+## v0.2.1
+
+- Removed eslint-fix command from script

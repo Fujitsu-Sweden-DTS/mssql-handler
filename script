@@ -62,9 +62,6 @@ Usage:
 
   ./script run-tests         # Run tests.
 
-  ./script eslint-fix [eslint arguments]
-                             # Let ESLint fix everything it can.
-
   ./script publish           # Make sure everything looks ready for publishing,
                              # and then publish to registry.
 EOF
