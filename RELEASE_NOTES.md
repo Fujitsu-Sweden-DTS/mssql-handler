@@ -19,3 +19,7 @@ First published version
 - Removed eslint
 - Updated dependencies
 - Bumped node version
+
+## v0.3.0
+
+- Resolve vulnerabilities
